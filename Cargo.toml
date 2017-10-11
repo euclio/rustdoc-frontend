@@ -1,0 +1,15 @@
+[package]
+name = "rustdoc-frontend"
+version = "0.1.0"
+authors = ["Andy Russell <arussell123@gmail.com>"]
+
+[dependencies]
+clap = "2"
+handlebars = { version = "0.25", features = ["serde_type"] }
+jsonapi = "0.5"
+log = "0.3"
+pretty_env_logger = "0.1"
+pulldown-cmark = { version = "0.0.11", default-features = false }
+serde = "0.9"
+serde_json = "0.9"
+pathdiff = "0.1"

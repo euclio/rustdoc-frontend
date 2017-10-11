@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Rustdoc</title>
+</head>
+<body>
+  <h1>{{ type }} {{ name }}</h1>
+  <div>
+    {{{ docs }}}
+
+    <div>
+    {{#each sections}}
+      <h2>{{ @key }}</h2>
+      <table>
+        {{#each this}}
+          <tr>
+            <td><a href="{{ this.link }}">{{ this.name }}</a></td><td>{{{ this.docs }}}</td>
+          </tr>
+        {{/each}}
+      </table>
+    {{/each}}
+    </div>
+  </div>
+</body>
+</html>
