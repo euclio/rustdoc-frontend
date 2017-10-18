@@ -1,4 +1,4 @@
-extern crate rustdoc_frontend as frontend;
+extern crate rustdoc_static;
 
 extern crate clap;
 extern crate handlebars;
@@ -31,5 +31,5 @@ fn main() {
     io::stdin().read_to_string(&mut json).unwrap();
 
     let document = JsonApiDocument::from_str(&json).unwrap();
-    frontend::render_docs(&document, output_path).unwrap();
+    rustdoc_static::render_docs(&document, output_path).unwrap();
 }

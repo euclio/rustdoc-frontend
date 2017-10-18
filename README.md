@@ -1,4 +1,4 @@
-# rustdoc-frontend
+# rustdoc-static
 
 A frontend that can be used with the new [rustdoc] to generate static
 documentation.
