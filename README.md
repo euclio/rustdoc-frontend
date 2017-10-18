@@ -9,7 +9,8 @@ documentation.
 $ cargo run --release -- path/to/data.json
 ```
 
-Documentation will be generated in `target/doc2`.
+Documentation will be generated in the directory specified by the `--output`
+parameter.
 
 [rustdoc]: https://github.com/steveklabnik/rustdoc
 

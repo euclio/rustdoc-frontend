@@ -31,7 +31,7 @@ pub fn render_docs<P: AsRef<Path>>(document: &JsonApiDocument, root: P) -> io::R
         .register_template_file("item", "templates/item.hbs")
         .unwrap();
 
-    let doc_root = root.as_ref().join("doc2");
+    let doc_root = root.as_ref();
     fs::create_dir_all(&doc_root)?;
 
     // Render the top level crate docs.
