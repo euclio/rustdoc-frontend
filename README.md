@@ -5,12 +5,19 @@ documentation.
 
 ## Usage
 
+`rustdoc-static` is intended to be used with the new [rustdoc] as a pluggable
+frontend.
+
+To use this frontend instead of the built-in frontend, build the frontend and
+set the `RUSTDOC_FRONTEND` environment variable.
+
 ```bash
-$ cargo run --release -- path/to/data.json
+$ cargo build --release
+$ export RUSTDOC_FRONTEND=/path/to/repo/target/release/rustdoc-static
 ```
 
-Documentation will be generated in the directory specified by the `--output`
-parameter.
+Now, run `rustdoc` on your target crate. Documentation will be generated in the
+crate's `target/doc` directory.
 
 [rustdoc]: https://github.com/steveklabnik/rustdoc
 
