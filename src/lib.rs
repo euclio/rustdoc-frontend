@@ -27,8 +27,13 @@ use serde_json::Value;
 /// files at the doc root.
 pub fn render_docs<P: AsRef<Path>>(document: &JsonApiDocument, root: P) -> io::Result<()> {
     let mut handlebars = Handlebars::new();
+
+    // FIXME: Include template in binary.
     handlebars
-        .register_template_file("item", "templates/item.hbs")
+        .register_template_file(
+            "item",
+            concat!(env!("CARGO_MANIFEST_DIR"), "/templates/item.hbs"),
+        )
         .unwrap();
 
     let doc_root = root.as_ref();
