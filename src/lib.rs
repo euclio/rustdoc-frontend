@@ -62,14 +62,17 @@ fn write_doc<P: AsRef<Path>>(
     doc_root: P,
 ) -> io::Result<()> {
     let doc_root = doc_root.as_ref();
-    let path = doc_root.join(path_for_resource(resource));
-    fs::create_dir_all(path.parent().unwrap())?;
-    let mut file = File::create(&path)?;
 
-    info!("rendering `{}` as `{}`", resource.id, path.display());
-    let context = generate_context(document, resource);
-    let rendered_template = handlebars.render("item", &context).unwrap();
-    file.write_all(rendered_template.as_bytes()).unwrap();
+    if let Some(path) = path_for_resource(resource) {
+        let path = doc_root.join(path);
+        fs::create_dir_all(path.parent().unwrap())?;
+        let mut file = File::create(&path)?;
+
+        info!("rendering `{}` as `{}`", resource.id, path.display());
+        let context = generate_context(document, resource);
+        let rendered_template = handlebars.render("item", &context).unwrap();
+        file.write_all(rendered_template.as_bytes()).unwrap();
+    }
 
     Ok(())
 }
@@ -99,43 +102,32 @@ fn generate_context(document: &JsonApiDocument, resource: &Resource) -> Value {
 
             let json_resources = resources
                 .iter()
-                .flat_map(|resource_id| {
-                    let id = &resource_id.id;
+                .flat_map(|child| {
+                    let id = &child.id;
 
-                    if let Some(related_resource) = resource_by_id(document, id) {
-                        let name = related_resource.id.rsplit("::").next().unwrap_or_else(
-                            || id,
-                        );
-
-                        // Create a link to the child resource. Since /index.html paths in the
-                        // browser actually act like folders, we need to diff the paths from the
-                        // parent folder.
-                        let link: String = {
-                            let parent_path = path_for_resource(resource);
-                            let parent_folder = parent_path.parent().unwrap();
-                            let child_path = path_for_resource(related_resource);
-                            let relative_path = pathdiff::diff_paths(&child_path, &parent_folder)
-                                .unwrap();
-                            relative_path
-                                .into_iter()
-                                .map(|component| component.to_str().unwrap())
-                                .collect::<Vec<_>>()
-                                .join("/")
-                        };
-
-                        let json = json!({
-                            "name": name,
-                            "link": link,
-                            "docs": docs_for_resource(related_resource),
-                        });
-
-                        Some(json)
-                    } else {
-                        warn!(
+                    let child = resource_by_id(document, id);
+                    if child.is_none() {
+                        error!(
                             "could not find '{}' in the document's included resources. \
                             This is probably a bug in the rustdoc backend.", id);
                         return None;
                     }
+                    let child = child.unwrap();
+
+                    let name = child.id.rsplit("::").next().unwrap_or_else(|| id);
+
+                    // Create a link to the child resource. Since /index.html paths in the
+                    // browser actually act like folders, we need to diff the paths from the
+                    // parent folder.
+                    let link = link(resource, child);
+
+                    let json = json!({
+                        "name": name,
+                        "link": link,
+                        "docs": docs_for_resource(child),
+                    });
+
+                    Some(json)
                 })
                 .collect();
 
@@ -157,13 +149,36 @@ fn generate_context(document: &JsonApiDocument, resource: &Resource) -> Value {
     context
 }
 
-/// Returns a path to the doc file for a given resource.
-fn path_for_resource(resource: &Resource) -> PathBuf {
+/// Creates a link to a child resource if a page exists for it.
+fn link(resource: &Resource, child: &Resource) -> Option<String> {
+    match (path_for_resource(resource), path_for_resource(child)) {
+        (Some(parent_path), Some(child_path)) => {
+            let parent_folder = parent_path.parent().unwrap();
+
+            // Since /index.html paths in the browser actually act like folders, we need to diff
+            // the paths from the parent folder.
+            let relative_path = pathdiff::diff_paths(&child_path, &parent_folder).unwrap();
+
+            let link = relative_path
+                .into_iter()
+                .map(|component| component.to_str().unwrap())
+                .collect::<Vec<_>>()
+                .join("/");
+            Some(link)
+        }
+        _ => None,
+    }
+}
+
+/// Returns a path to the doc file for a given resource, if it exists.
+///
+/// For example, fields do not have individual links.
+fn path_for_resource(resource: &Resource) -> Option<PathBuf> {
     let mut path: PathBuf = resource.id.split("::").collect();
 
     if resource._type == "module" || resource._type == "crate" {
         path.push("index.html");
-        path
+        Some(path)
     } else {
         let ty = match resource._type.as_str() {
             "struct" => "struct",
@@ -171,13 +186,14 @@ fn path_for_resource(resource: &Resource) -> PathBuf {
             "trait" => "trait",
             "type" => "type",
             "enum" => "enum",
+            "field" => return None,
             res => unimplemented!("resource {}: {}", res, resource.id),
         };
 
         let item_name = path.file_name().unwrap().to_owned();
         path.pop();
         path.push(&format!("{}.{}.html", ty, item_name.to_str().unwrap()));
-        path
+        Some(path)
     }
 }
 
@@ -220,7 +236,7 @@ mod tests {
         };
 
         assert_eq!(
-            super::path_for_resource(&module),
+            super::path_for_resource(&module).unwrap(),
             PathBuf::from("test_crate/test_module/index.html")
         );
 
@@ -231,8 +247,16 @@ mod tests {
         };
 
         assert_eq!(
-            super::path_for_resource(&strukt),
+            super::path_for_resource(&strukt).unwrap(),
             PathBuf::from("test_crate/struct.TestStruct.html")
         );
+
+        let field = Resource {
+            _type: "field".into(),
+            id: "test_crate::Struct::field".into(),
+            ..Default::default()
+        };
+
+        assert_eq!(super::path_for_resource(&field), None);
     }
 }
