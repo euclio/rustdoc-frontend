@@ -66,7 +66,7 @@ fn write_doc<P: AsRef<Path>>(
     fs::create_dir_all(path.parent().unwrap())?;
     let mut file = File::create(&path)?;
 
-    info!("rendering `{}`", path.display());
+    info!("rendering `{}` as `{}`", resource.id, path.display());
     let context = generate_context(document, resource);
     let rendered_template = handlebars.render("item", &context).unwrap();
     file.write_all(rendered_template.as_bytes()).unwrap();
@@ -167,7 +167,11 @@ fn path_for_resource(resource: &Resource) -> PathBuf {
     } else {
         let ty = match resource._type.as_str() {
             "struct" => "struct",
-            _ => unimplemented!(),
+            "function" => "fn",
+            "trait" => "trait",
+            "type" => "type",
+            "enum" => "enum",
+            res => unimplemented!("resource {}: {}", res, resource.id),
         };
 
         let item_name = path.file_name().unwrap().to_owned();
