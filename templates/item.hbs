@@ -3,24 +3,33 @@
 <head>
   <meta charset="utf-8">
   <title>Rustdoc</title>
+  <link rel="stylesheet" href="{{ pathToRoot }}/styles.css">
 </head>
 <body>
-  <h1>{{ type }} {{ name }}</h1>
-  <div>
-    {{{ docs }}}
-
-    <div>
+  <aside class="sidebar">
+    <h1>{{ type }} {{ name }}</h1>
     {{#each sections}}
-      <h2>{{ @key }}</h2>
-      <table>
-        {{#each this}}
-          <tr>
-            <td><a href="{{ this.link }}">{{ this.name }}</a></td><td>{{{ this.docs }}}</td>
-          </tr>
-        {{/each}}
-      </table>
+    <a href="#{{ @key }}"><h2>{{ @key }}</h2></a>
     {{/each}}
+  </aside>
+  <article>
+    <h1>{{ type }} {{ name }}</h1>
+    <div>
+      {{{ docs }}}
+
+      <div>
+      {{#each sections}}
+        <h2 id="{{ @key }}">{{ @key }}</h2>
+        <table>
+          {{#each this}}
+            <tr>
+              <td><a href="{{ this.link }}">{{ this.name }}</a></td><td>{{{ this.docs }}}</td>
+            </tr>
+          {{/each}}
+        </table>
+      {{/each}}
+      </div>
     </div>
-  </div>
+  </article>
 </body>
 </html>

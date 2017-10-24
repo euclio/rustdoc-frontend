@@ -1,0 +1,7 @@
+body {
+  display: flex;
+}
+
+.sidebar {
+  flex-shrink: 0;
+}

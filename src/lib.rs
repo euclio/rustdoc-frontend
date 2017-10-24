@@ -19,6 +19,7 @@ extern crate pulldown_cmark;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::io;
+use std::iter;
 use std::path::{PathBuf, Path};
 
 use handlebars::Handlebars;
@@ -52,6 +53,11 @@ pub fn render_docs<P: AsRef<Path>>(document: &JsonApiDocument, root: P) -> io::R
         write_doc(document, &resource, &handlebars, &doc_root)?;
     }
 
+    let mut css = File::create(doc_root.join("styles.css"))?;
+    css.write_all(
+        include_str!("../static/styles.css").as_bytes(),
+    )?;
+
     Ok(())
 }
 
@@ -80,9 +86,14 @@ fn write_doc<P: AsRef<Path>>(
 
 /// Generates a context to be used when rendering a resource with handlebars.
 fn generate_context(document: &JsonApiDocument, resource: &Resource) -> Value {
+    let path_to_root = iter::repeat("..")
+        .take(resource.id.rsplit("::").count())
+        .collect::<Vec<_>>();
+
     let mut context = json!({
         "type": resource._type,
         "name": resource.id,
+        "pathToRoot": path_to_root.join("/"),
     });
 
     if let Some(docs) = docs_for_resource(&resource) {
