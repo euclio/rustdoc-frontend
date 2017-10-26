@@ -198,6 +198,7 @@ fn path_for_resource(resource: &Resource) -> Option<PathBuf> {
             "trait" => "trait",
             "type" => "type",
             "enum" => "enum",
+            "const" => "constant",
             "field" => return None,
             res => unimplemented!("resource {}: {}", res, resource.id),
         };
