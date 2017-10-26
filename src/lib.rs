@@ -19,7 +19,6 @@ extern crate pulldown_cmark;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::io;
-use std::iter;
 use std::path::{PathBuf, Path};
 
 use handlebars::Handlebars;
@@ -76,7 +75,8 @@ fn write_doc<P: AsRef<Path>>(
         let mut file = File::create(&path)?;
 
         info!("rendering `{}` as `{}`", resource.id, path.display());
-        let context = generate_context(document, resource);
+        let context = generate_context(doc_root, document, resource);
+        debug!("context: {}", context);
         let rendered_template = handlebars.render("item", &context).unwrap();
         file.write_all(rendered_template.as_bytes()).unwrap();
     }
@@ -85,15 +85,16 @@ fn write_doc<P: AsRef<Path>>(
 }
 
 /// Generates a context to be used when rendering a resource with handlebars.
-fn generate_context(document: &JsonApiDocument, resource: &Resource) -> Value {
-    let path_to_root = iter::repeat("..")
-        .take(resource.id.rsplit("::").count())
-        .collect::<Vec<_>>();
+fn generate_context(root: &Path, document: &JsonApiDocument, resource: &Resource) -> Value {
+    let path_to_root = path_for_resource(resource).and_then(|path| {
+        let path = root.join(path);
+        html_diff_paths(root, &path)
+    });
 
     let mut context = json!({
         "type": resource._type,
         "name": resource.id,
-        "pathToRoot": path_to_root.join("/"),
+        "pathToRoot": path_to_root,
     });
 
     if let Some(docs) = docs_for_resource(&resource) {
@@ -164,20 +165,7 @@ fn generate_context(document: &JsonApiDocument, resource: &Resource) -> Value {
 /// Creates a link to a child resource if a page exists for it.
 fn link(resource: &Resource, child: &Resource) -> Option<String> {
     match (path_for_resource(resource), path_for_resource(child)) {
-        (Some(parent_path), Some(child_path)) => {
-            let parent_folder = parent_path.parent().unwrap();
-
-            // Since /index.html paths in the browser actually act like folders, we need to diff
-            // the paths from the parent folder.
-            let relative_path = pathdiff::diff_paths(&child_path, &parent_folder).unwrap();
-
-            let link = relative_path
-                .into_iter()
-                .map(|component| component.to_str().unwrap())
-                .collect::<Vec<_>>()
-                .join("/");
-            Some(link)
-        }
+        (Some(parent_path), Some(child_path)) => html_diff_paths(&child_path, &parent_path),
         _ => None,
     }
 }
@@ -234,6 +222,31 @@ fn resource_by_id<'a>(document: &'a JsonApiDocument, id: &str) -> Option<&'a Res
     })
 }
 
+/// Perform a `pathdiff::diff_paths` of two `Path` objects, but return a `String` for HTML output.
+///
+/// The returned HTML path will differ from a filesystem path in two ways:
+///
+/// - It will have any backslashed replaced by forward slashes.
+/// - It will be relative from the parent folder, not the file itself.
+///
+/// # Panics
+///
+/// This function will panic if the `base` parameter does not have a parent, or if any of the path
+/// components are invalid UTF-8.
+fn html_diff_paths(path: &Path, base: &Path) -> Option<String> {
+    let base = base.parent().expect("path did not have a parent");
+
+    pathdiff::diff_paths(path, base).map(|relative_path| {
+        relative_path
+            .into_iter()
+            .map(|component| {
+                component.to_str().expect("Path contained invalid UTF-8")
+            })
+            .collect::<Vec<_>>()
+            .join("/")
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
@@ -271,5 +284,12 @@ mod tests {
         };
 
         assert_eq!(super::path_for_resource(&field), None);
+    }
+
+    #[test]
+    fn html_diff_paths() {
+        let base = PathBuf::from("/target/doc/example/index.html");
+        let path = PathBuf::from("/target/doc");
+        assert_eq!(super::html_diff_paths(&path, &base), Some("..".into()));
     }
 }
