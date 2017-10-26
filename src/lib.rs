@@ -57,6 +57,9 @@ pub fn render_docs<P: AsRef<Path>>(document: &JsonApiDocument, root: P) -> io::R
         include_str!("../static/styles.css").as_bytes(),
     )?;
 
+    let mut js = File::create(doc_root.join("main.js"))?;
+    js.write_all(include_str!("../static/main.js").as_bytes())?;
+
     Ok(())
 }
 

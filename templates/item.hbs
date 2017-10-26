@@ -6,6 +6,12 @@
   <link rel="stylesheet" href="{{ pathToRoot }}/styles.css">
 </head>
 <body>
+  <button class="sidebar-toggle">
+    <!-- Hamburger Button -->
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
   <aside class="sidebar">
     <h1>{{ type }} {{ name }}</h1>
     {{#each sections}}
@@ -32,4 +38,5 @@
     </div>
   </article>
 </body>
+<script src="{{ pathToRoot }}/main.js"></script>
 </html>
